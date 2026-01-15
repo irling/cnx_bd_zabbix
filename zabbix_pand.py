@@ -1,10 +1,24 @@
 from sqlalchemy import create_engine
+from dotenv import load_dotenv
 import pandas as pd
+import os
+
+# LOAD VAR FOR .ENV
+load_dotenv()
+
+# LOCAL VAR 
+DB_USER = os.getenv("ZBX_DB_USER")
+DB_PASS = os.getenv("ZBX_DB_PASS")
+DB_HOST = os.getenv("ZBX_DB_HOST")
+DB_PORT = os.getenv("ZBX_DB_PORT")
+DB_NAME = os.getenv("ZBX_DB_NAME")
 
 #THIS FUNCTION GET THE DATA FOR THE DATABASE FROM ZABBIX AND SHOWS IN ONE DATAFRAME.
 def get_data_zabbix ():
     
-    engine = create_engine("postgresql+psycopg2://zabbix:y0fc2025.@192.168.20.190:5432/zabbix")
+    engine = create_engine(
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASS}"
+        f"@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
     #QUERIES FOR THE DATABASE OF ZABBIX
     queries = {
