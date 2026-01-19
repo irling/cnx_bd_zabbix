@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 import pandas as pd
 import os
@@ -81,16 +81,50 @@ def get_data_zabbix ():
     """,
     
     "disk_problem": """
-        SELECT
+            SELECT
+                h.name AS host_name,
+                regexp_replace(t.description, '.*FS \\[([^\\]]+)\\].*', '\1') AS filesystem,
+                t.description AS trigger_description,
+                to_timestamp(p.clock) AS problem_time
+            FROM problem p
+            JOIN triggers t ON p.objectid = t.triggerid
+            JOIN functions f ON t.triggerid = f.triggerid
+            JOIN items i ON f.itemid = i.itemid
+            JOIN hosts h ON i.hostid = h.hostid
+            WHERE
+            (
+                t.description ILIKE '%%FS %%Space is low%%'
+                OR t.description ILIKE '%%FS %%Space is critically low%%'
+                OR t.description ILIKE '%%Free space is low%%'
+                OR t.description ILIKE '%%Free space is critically low%%'
+            )
+            ORDER BY p.clock DESC;
+
+
+        """,
+        "disk_problem_w_time": """
+        
+            SELECT
             h.name AS host_name,
             regexp_replace(t.description, '.*FS \\[([^\\]]+)\\].*', '\1') AS filesystem,
-            t.description AS trigger_description,
+            hu_pused.value AS percent_used,
+            ROUND(hu_total.value / 1024 / 1024 / 1024, 1) AS total_gb,
             to_timestamp(p.clock) AS problem_time
         FROM problem p
         JOIN triggers t ON p.objectid = t.triggerid
         JOIN functions f ON t.triggerid = f.triggerid
         JOIN items i ON f.itemid = i.itemid
         JOIN hosts h ON i.hostid = h.hostid
+        LEFT JOIN items i_pused
+            ON i_pused.hostid = h.hostid
+            AND i_pused.key_ ILIKE 'vfs.fs.size%pused%'
+        LEFT JOIN history_uint hu_pused
+            ON hu_pused.itemid = i_pused.itemid
+        LEFT JOIN items i_total
+            ON i_total.hostid = h.hostid
+            AND i_total.key_ ILIKE 'vfs.fs.size%total%'
+        LEFT JOIN history_uint hu_total
+            ON hu_total.itemid = i_total.itemid
         WHERE
         (
             t.description ILIKE '%%FS %%Space is low%%'
@@ -108,7 +142,7 @@ def get_data_zabbix ():
 
     #EXECUTE THE QUERIES 
     with engine.connect() as conn:
-        df_hosts = pd.read_sql(queries["disk_problem"], conn)
+        df_hosts = pd.read_sql(text(queries["disk_problem"]), conn)
             
         print(df_hosts)
 
@@ -117,10 +151,10 @@ def get_data_zabbix ():
 
 def send_data_csv (df):
     #GUARDADO DE DATOS EN UN CSV (CAMBIAR NOMBRE DEL ARCHIVO .CSV)
-    df.to_csv(r"D:\datos_prt\datos_guardados\problem_w_disk.csv", index=False)
+    df.to_csv(r"D:\datos_prt\datos_guardados\problem_w_disk_02.csv", index=False)
 
 
 
 #===== CALLED OF THE FUNCTIONS =======
 df_host = get_data_zabbix()
-#send_data_csv(df_host)
+send_data_csv(df_host)
