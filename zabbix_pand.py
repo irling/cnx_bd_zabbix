@@ -3,6 +3,15 @@ from dotenv import load_dotenv
 import pandas as pd
 import os
 
+
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from datetime import datetime
+
+
+
 # LOAD VAR FOR .ENV
 load_dotenv()
 
@@ -154,7 +163,6 @@ def send_data_csv (df):
     df.to_csv(r"D:\datos_prt\datos_guardados\problem_w_disk_02.csv", index=False)
 
 
-
 #===== CALLED OF THE FUNCTIONS =======
 df_host = get_data_zabbix()
-send_data_csv(df_host)
+#send_data_csv(df_host)
